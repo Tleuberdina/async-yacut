@@ -12,7 +12,7 @@ AUTH_HEADERS = {
 BASE_URL = f'{app.config["API_HOST"]}{app.config["API_VERSION"]}'
 DISK_INFO_URL = f'{BASE_URL}/disk/'
 DOWNLOAD_LINK_URL = f'{BASE_URL}/disk/resources/download'
-REQUEST_UPLOAD_URL = f'{BASE_URL}/disk/resources/upload'
+REQUEST_UPLOAD_URL = https://cloud-api.yandex.net/v1/disk/resources/upload'
 
 
 async def async_upload_files_to_disk(files):
