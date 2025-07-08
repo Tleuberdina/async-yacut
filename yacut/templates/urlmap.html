@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<main>
+  <section class="container my-5 px-4">
+    <h1 class="text-center"><span style="color:red">Ya</span>Cut</h1>
+    <p class="text-center my-4">
+      Создайте короткую ссылку автоматически или предложите свой вариант
+    </p>
+    <div class="container">
+      <div class="row my-3">
+        <div class="col-sm">
+        </div>
+        <div class="col-sm">
+          <form method="POST" novalidate>
+            {{ form.csrf_token }}
+            {{ form.original_link(class="form-control form-control-lg py-3 mb-3", placeholder=form.original_link.label.text) }}<br />
+            {% if form.original_link.errors %}
+              <p class="text-danger">
+                {% for error in form.original_link.errors %}
+                    {{ error }}
+                {% endfor %}
+              </p>
+            {% endif %}
+            {{ form.custom_id(class="form-control form-control-lg py-3 mb-3", placeholder=form.custom_id.label.text) }}<br />
+            {{ form.submit(class="button px-5 py-3 btn btn-primary") }}
+          </form>
+          <p class="py-3 mb-3">
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                {% for message in messages %}
+                  {{ message }}
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+          </p>
+        </div>
+        <div class="col-sm">
+        </div>
+      </div>
+    </div>
+    {% if short_url %}
+      <div style="margin-top: 20px; text-align: center;">
+        <strong>Ваша короткая ссылка:</strong><br>
+          <a href="{{ short_url }}" target="_blank">{{ short_url }}</a>
+      </div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<main>
+  <section class="container my-5 px-4">
+    <h1 class="text-center"><span style="color:red">Ya</span>Cut</h1>
+    <p class="text-center my-4">
+      Загрузите файлы и получите на них корткие ссылки
+    </p>
+    <div class="container">
+      <div class="row my-3">
+        <div class="col-sm">
+        </div>
+        <div class="col-sm">
+          <form method="POST" novalidate enctype="multipart/form-data">
+            {{ form.csrf_token }}
+            {{ form.files(class="form-control form-control-lg py-2 mb-3")}}
+            {% if form.files.errors %}
+              <p class="text-danger">
+                {% for error in form.files.errors %}
+                    {{ error }}
+                {% endfor %}
+              </p>
+            {% endif %}
+            {{ form.submit(class="button px-5 py-3 btn btn-primary") }}
+          </form>
+          <p class="py-3 mb-3">
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                {% for message in messages %}
+                  {{ message }}
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+          </p>
+        </div>
+        <div class="col-sm">
+        </div>
+      </div>
+    </div>
+    {% if short_url and original %}
+      <div style="margin-top: 20px; text-align: center;">
+        <strong>{{ original }}</strong><br>
+          <a href="{{ short_url }}" target="_blank">{{ short_url }}</a>
+      </div>
+    {% endif %}
+    {% if original %}
+    <div style="margin-top: 20px; display: flex; justify-content: center;">
+      <div style="width: 80%; max-width: 800px;">
+        {% if original is string %}
+          <div style="display: flex; margin-bottom: 15px;">
+            <div style="width: 60%; text-align: left; padding-right: 10px;">{{ original }}</div>
+            <div style="width: 40%; text-align: left;">
+              <a href="{{ files_data[0].short_url }}" style="word-break: break-all;" download>{{ files_data[0].short_url }}</a>
+            </div>
+          </div>
+        {% else %}
+          {% for file in files_data %}
+            <div style="display: flex; margin-bottom: 15px; {% if not loop.last %}border-bottom: 1px solid #e0e0e0; padding-bottom: 15px;{% endif %}">
+              <div style="width: 60%; text-align: left; padding-right: 10px;">{{ file.name }}</div>
+              <div style="width: 40%; text-align: left;">
+                <a href="{{ file.short_url }}" style="word-break: break-all;" download>{{ file.short_url }}</a>
+              </div>
+            </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}
