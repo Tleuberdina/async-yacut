@@ -1,7 +1,9 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, MultipleFileField
 from wtforms import SubmitField, URLField
-from wtforms.validators import DataRequired, Length, Optional
+from wtforms.validators import DataRequired, Length, Optional, Regexp
+
+from .constants import ACCEPTABLE_VALUE, FILE_EXTENSION, MAX_LENGTH, MIN_LENGTH
 
 
 class URLMapMainForm(FlaskForm):
@@ -11,7 +13,19 @@ class URLMapMainForm(FlaskForm):
     )
     custom_id = URLField(
         'Ваш вариант короткой ссылки',
-        validators=[Length(1, 16), Optional()]
+        validators=[
+            Length(
+                MIN_LENGTH,
+                MAX_LENGTH,
+                message=f'Длина должна быть от {MIN_LENGTH}'
+                        f'до {MAX_LENGTH} символов'
+            ),
+            Regexp(
+                ACCEPTABLE_VALUE,
+                message='Допустимы только латинские буквы и цифры'
+            ),
+            Optional()
+        ]
     )
     submit = SubmitField('Создать')
 
@@ -20,10 +34,10 @@ class URLMapForm(FlaskForm):
     files = MultipleFileField(
         validators=[
             FileAllowed(
-                ['jpg', 'jpeg', 'png', 'gif', 'bmp'],
+                FILE_EXTENSION,
                 message=(
                     'Выберите файлы с расширением '
-                    '.jpg, .jpeg, .png, .gif или .bmp'
+                    + ', '.join(f'.{ext}' for ext in sorted(FILE_EXTENSION))
                 )
             )
         ]

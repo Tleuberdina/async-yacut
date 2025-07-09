@@ -1,21 +1,12 @@
-import random
-import re
-import string
-
 from flask import Response, flash, redirect, request, render_template
 import requests
 
 from . import app, db
+from .constants import MAX_ATTEMPTS
 from .disk import async_upload_files_to_disk
+from .error_handlers import InvalidAPIUsage
 from .forms import URLMapForm, URLMapMainForm
 from .models import URLMap
-
-
-def get_unique_short_id(length=6):
-    """Генерирует код для короткой ссылки."""
-    unique_short = string.ascii_letters + string.digits
-    short_url = ''.join(random.choice(unique_short) for _ in range(length))
-    return short_url
 
 
 def is_yandex_disk_link(url):
@@ -54,48 +45,24 @@ def add_urlmap_view():
     длинных ссылок в короткие.
     """
     form = URLMapMainForm()
-    short_url = None
-    reserved_words = ['files', 'admin', 'api']
-    if form.validate_on_submit():
-        original_url = form.original_link.data
-        custom_id = form.custom_id.data
-        if custom_id:
-            short_url = custom_id
-            if not re.fullmatch(r'^[a-zA-Z0-9]{1,16}$', short_url):
-                flash(
-                    'Короткая ссылка может содержать латинские буквы и цифры.'
-                )
-                return render_template('urlmap.html', form=form)
-            if (
-                short_url in reserved_words
-                or URLMap.query.filter_by(short=short_url).first() is not None
-            ):
-                flash(
-                    'Предложенный вариант короткой ссылки уже существует.'
-                )
-                return render_template('urlmap.html', form=form)
-        else:
-            max_attempts = 10
-            for _ in range(max_attempts):
-                short_url = get_unique_short_id()
-                if (
-                    short_url not in reserved_words and
-                    not URLMap.query.filter_by(short=short_url).first()
-                ):
-                    break
-        urlmap = URLMap(
-            original=original_url,
-            short=short_url
+    if not form.validate_on_submit():
+        return render_template('urlmap.html', form=form, short_url=None)
+    try:
+        urlmap = URLMap.create(
+            original_link=form.original_link.data,
+            custom_id=form.custom_id.data if form.custom_id.data else None
         )
-        db.session.add(urlmap)
-        db.session.commit()
-        full_short_url = f'{request.host_url}{short_url}'
         return render_template(
             'urlmap.html',
             form=form,
-            short_url=full_short_url
+            **urlmap.to_dict(api_format=False)
         )
-    return render_template('urlmap.html', form=form, short_url=None)
+    except InvalidAPIUsage as e:
+        if 'недопустимое имя' in str(e):
+            flash('Указано недопустимое имя для короткой ссылки')
+        else:
+            flash('Предложенный вариант короткой ссылки уже существует.')
+        return render_template('urlmap.html', form=form)
 
 
 @app.route('/files', methods=['GET', 'POST'])
@@ -110,9 +77,8 @@ async def add_urlmap_files_view():
         download_links = [info['url'] for info in download_info]
         files_data = []
         for name, link in zip(file_names, download_links):
-            max_attempts = 10
-            for _ in range(max_attempts):
-                short_url = get_unique_short_id()
+            for _ in range(MAX_ATTEMPTS):
+                short_url = URLMap.generate_short_id()
                 if not URLMap.query.filter_by(short=short_url).first():
                     break
             urlmap = URLMap(
