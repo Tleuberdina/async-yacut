@@ -1,10 +1,8 @@
-from flask import Response, flash, redirect, request, render_template
+from flask import Response, redirect, request, render_template
 import requests
 
 from . import app, db
-from .constants import MAX_ATTEMPTS
 from .disk import async_upload_files_to_disk
-from .error_handlers import InvalidAPIUsage
 from .forms import URLMapForm, URLMapMainForm
 from .models import URLMap
 
@@ -47,22 +45,24 @@ def add_urlmap_view():
     form = URLMapMainForm()
     if not form.validate_on_submit():
         return render_template('urlmap.html', form=form, short_url=None)
-    try:
-        urlmap = URLMap.create(
-            original_link=form.original_link.data,
-            custom_id=form.custom_id.data if form.custom_id.data else None
-        )
+    short_url = None
+    urlmap = URLMap.create(
+        original_link=form.original_link.data,
+        custom_id=form.custom_id.data,
+        validate=False,
+        form=form
+    )
+    if isinstance(urlmap, dict):
         return render_template(
-            'urlmap.html',
-            form=form,
-            **urlmap.to_dict(api_format=False)
+            urlmap['error_template'],
+            form=urlmap['form']
         )
-    except InvalidAPIUsage as e:
-        if 'недопустимое имя' in str(e):
-            flash('Указано недопустимое имя для короткой ссылки')
-        else:
-            flash('Предложенный вариант короткой ссылки уже существует.')
-        return render_template('urlmap.html', form=form)
+    short_url = urlmap.to_dict()['short_link']
+    return render_template(
+        'urlmap.html',
+        form=form,
+        short_url=short_url
+    )
 
 
 @app.route('/files', methods=['GET', 'POST'])
@@ -77,10 +77,7 @@ async def add_urlmap_files_view():
         download_links = [info['url'] for info in download_info]
         files_data = []
         for name, link in zip(file_names, download_links):
-            for _ in range(MAX_ATTEMPTS):
-                short_url = URLMap.generate_short_id()
-                if not URLMap.query.filter_by(short=short_url).first():
-                    break
+            short_url = URLMap.generate_short_id()
             urlmap = URLMap(
                 original=link,
                 short=short_url
@@ -98,4 +95,4 @@ async def add_urlmap_files_view():
             original=original,
             files_data=files_data
         )
-    return render_template('urlmap_files.html', form=form, short_url=None)
+    return render_template('urlmap_files.html', form=form)

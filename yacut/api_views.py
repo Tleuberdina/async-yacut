@@ -13,8 +13,13 @@ def get_urlmap(short_id):
     Обработчик get-запросов к api на получение
     оригинальной ссылки по указанному короткому идентификатору.
     """
-    urlmap = URLMap.get_urlmap_or_404(short_id)
-    return jsonify({'url': urlmap.original}), 200
+    urlmap = URLMap.get_urlmap(short_id)
+    if urlmap is None:
+        raise InvalidAPIUsage(
+            'Указанный id не найден',
+            HTTPStatus.NOT_FOUND
+        )
+    return jsonify({'url': urlmap.original}), HTTPStatus.OK
 
 
 @app.route('/api/id/', methods=['POST'])
@@ -36,6 +41,7 @@ def add_urlmap_api_view():
     custom_id = data.get('custom_id')
     urlmap = URLMap.create(
         original_link=data['url'],
-        custom_id=custom_id if custom_id else None
+        custom_id=custom_id,
+        validate=True
     )
-    return jsonify(urlmap.to_dict(api_format=True)), 201
+    return jsonify(urlmap.to_dict()), HTTPStatus.CREATED
