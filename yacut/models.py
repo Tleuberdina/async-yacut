@@ -1,14 +1,11 @@
 from datetime import datetime
-from http import HTTPStatus
 import random
-import re
 import string
 
-from flask import flash, url_for
+from flask import url_for
 
 from . import db
-from .constants import (ACCEPTABLE_VALUE, LENGTH_CODE, MAX_ATTEMPTS,
-                        MAX_LENGTH, MESSAGE_UNACCEPTABLE_NAME,
+from .constants import (LENGTH_CODE, MAX_ATTEMPTS, MAX_LENGTH,
                         MESSAGE_NAME_ALREADY_EXISTS, RESERVED_WORDS)
 from .error_handlers import InvalidAPIUsage
 
@@ -42,8 +39,7 @@ class URLMap(db.Model):
     @staticmethod
     def get_urlmap(short_id):
         """Возвращает объект из БД."""
-        urlmap = URLMap.query.filter_by(short=short_id).first()
-        return urlmap
+        return URLMap.query.filter_by(short=short_id).first()
 
     @classmethod
     def generate_short_id(cls, length=LENGTH_CODE):
@@ -59,28 +55,17 @@ class URLMap(db.Model):
         return short_id
 
     @staticmethod
-    def create(original_link, custom_id=None, validate=False, form=None):
+    def create(original_link, custom_id=None):
         """Универсальный метод для создания объекта."""
-        if not custom_id:
-            short_url = URLMap.generate_short_id()
-        else:
-            short_url = custom_id
-            if not re.fullmatch(ACCEPTABLE_VALUE, short_url):
-                if validate:
-                    raise InvalidAPIUsage(
-                        MESSAGE_UNACCEPTABLE_NAME,
-                        HTTPStatus.BAD_REQUEST
-                    )
-                flash(MESSAGE_UNACCEPTABLE_NAME)
-                return {'error_template': 'urlmap.html', 'form': form}
+        if custom_id:
             if (
-                URLMap.get_urlmap(short_url) is not None
-                or short_url in RESERVED_WORDS
+                URLMap.get_urlmap(custom_id) is not None
+                or custom_id in RESERVED_WORDS
             ):
-                if validate:
-                    raise InvalidAPIUsage(MESSAGE_NAME_ALREADY_EXISTS)
-                flash(MESSAGE_NAME_ALREADY_EXISTS)
-                return {'error_template': 'urlmap.html', 'form': form}
+                raise InvalidAPIUsage(MESSAGE_NAME_ALREADY_EXISTS)
+            short_url = custom_id
+        else:
+            short_url = URLMap.generate_short_id()
         urlmap = URLMap(
             original=original_link,
             short=short_url

@@ -22,6 +22,13 @@
               </p>
             {% endif %}
             {{ form.custom_id(class="form-control form-control-lg py-3 mb-3", placeholder=form.custom_id.label.text) }}<br />
+            {% if form.custom_id.errors %}
+              <p class="text-danger">
+                {% for error in form.custom_id.errors %}
+                    {{ error }}
+                {% endfor %}
+              </p>
+            {% endif %}
             {{ form.submit(class="button px-5 py-3 btn btn-primary") }}
           </form>
           <p class="py-3 mb-3">

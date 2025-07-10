@@ -1,8 +1,10 @@
 from http import HTTPStatus
+import re
 
 from flask import jsonify, request
 
 from . import app
+from .constants import ACCEPTABLE_VALUE, MESSAGE_UNACCEPTABLE_NAME
 from .error_handlers import InvalidAPIUsage
 from .models import URLMap
 
@@ -39,9 +41,14 @@ def add_urlmap_api_view():
             HTTPStatus.BAD_REQUEST
         )
     custom_id = data.get('custom_id')
+    if custom_id:
+        if not re.fullmatch(ACCEPTABLE_VALUE, custom_id):
+            raise InvalidAPIUsage(
+                MESSAGE_UNACCEPTABLE_NAME,
+                HTTPStatus.BAD_REQUEST
+            )
     urlmap = URLMap.create(
         original_link=data['url'],
-        custom_id=custom_id,
-        validate=True
+        custom_id=custom_id
     )
     return jsonify(urlmap.to_dict()), HTTPStatus.CREATED

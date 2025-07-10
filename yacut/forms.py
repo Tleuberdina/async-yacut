@@ -3,7 +3,8 @@ from flask_wtf.file import FileAllowed, MultipleFileField
 from wtforms import SubmitField, URLField
 from wtforms.validators import DataRequired, Length, Optional, Regexp
 
-from .constants import ACCEPTABLE_VALUE, FILE_EXTENSION, MAX_LENGTH, MIN_LENGTH
+from .constants import (ACCEPTABLE_VALUE, MESSAGE_UNACCEPTABLE_NAME,
+                        FILE_EXTENSION, MAX_LENGTH, MIN_LENGTH)
 
 
 class URLMapMainForm(FlaskForm):
@@ -22,7 +23,7 @@ class URLMapMainForm(FlaskForm):
             ),
             Regexp(
                 ACCEPTABLE_VALUE,
-                message='Допустимы только латинские буквы и цифры'
+                message=MESSAGE_UNACCEPTABLE_NAME
             ),
             Optional()
         ]

@@ -1,8 +1,10 @@
-from flask import Response, redirect, request, render_template
+from flask import Response, flash, redirect, request, render_template
 import requests
 
 from . import app, db
+from .constants import MESSAGE_NAME_ALREADY_EXISTS
 from .disk import async_upload_files_to_disk
+from .error_handlers import InvalidAPIUsage
 from .forms import URLMapForm, URLMapMainForm
 from .models import URLMap
 
@@ -44,20 +46,17 @@ def add_urlmap_view():
     """
     form = URLMapMainForm()
     if not form.validate_on_submit():
-        return render_template('urlmap.html', form=form, short_url=None)
+        return render_template('urlmap.html', form=form)
     short_url = None
-    urlmap = URLMap.create(
-        original_link=form.original_link.data,
-        custom_id=form.custom_id.data,
-        validate=False,
-        form=form
-    )
-    if isinstance(urlmap, dict):
-        return render_template(
-            urlmap['error_template'],
-            form=urlmap['form']
+    try:
+        urlmap = URLMap.create(
+            original_link=form.original_link.data,
+            custom_id=form.custom_id.data
         )
-    short_url = urlmap.to_dict()['short_link']
+        short_url = urlmap.to_dict()['short_link']
+    except InvalidAPIUsage:
+        flash(MESSAGE_NAME_ALREADY_EXISTS)
+        return render_template('urlmap.html', form=form)
     return render_template(
         'urlmap.html',
         form=form,
@@ -71,28 +70,28 @@ async def add_urlmap_files_view():
     загрузки файлов и генерации коротких ссылок к ним.
     """
     form = URLMapForm()
-    if form.validate_on_submit():
-        download_info = await async_upload_files_to_disk(form.files.data)
-        file_names = [info['name'] for info in download_info]
-        download_links = [info['url'] for info in download_info]
-        files_data = []
-        for name, link in zip(file_names, download_links):
-            short_url = URLMap.generate_short_id()
-            urlmap = URLMap(
-                original=link,
-                short=short_url
-            )
-            db.session.add(urlmap)
-            files_data.append({
-                'name': name,
-                'short_url': f'{request.host_url}{short_url}'
-            })
-        db.session.commit()
-        original = file_names[0] if len(file_names) == 1 else file_names
-        return render_template(
-            'urlmap_files.html',
-            form=form,
-            original=original,
-            files_data=files_data
+    if not form.validate_on_submit():
+        return render_template('urlmap_files.html', form=form)
+    download_info = await async_upload_files_to_disk(form.files.data)
+    file_names = [info['name'] for info in download_info]
+    download_links = [info['url'] for info in download_info]
+    files_data = []
+    for name, link in zip(file_names, download_links):
+        short_url = URLMap.generate_short_id()
+        urlmap = URLMap(
+            original=link,
+            short=short_url
         )
-    return render_template('urlmap_files.html', form=form)
+        db.session.add(urlmap)
+        files_data.append({
+            'name': name,
+            'short_url': f'{request.host_url}{short_url}'
+        })
+    db.session.commit()
+    original = file_names[0] if len(file_names) == 1 else file_names
+    return render_template(
+        'urlmap_files.html',
+        form=form,
+        original=original,
+        files_data=files_data
+    )
